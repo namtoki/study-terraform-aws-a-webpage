@@ -1,0 +1,10 @@
+# Terraform
+.terraform/
+terraform.tfstate
+terraform.tfstate.backup
+*.tfvars
+override.tf
+override.tf.json
+
+# macOS
+.DS_Store

@@ -1,0 +1,188 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>My Dashboard</title>
+  <style>
+    :root {
+      --bg:      #0f1117;
+      --card:    #1c2333;
+      --border:  #2d3748;
+      --text:    #e2e8f0;
+      --muted:   #718096;
+      --accent:  #63b3ed;
+      --green:   #68d391;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      font-size: 14px;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 32px;
+      padding: 40px 20px;
+    }
+
+    .badge {
+      font-size: 11px;
+      color: var(--green);
+      border: 1px solid var(--green);
+      border-radius: 20px;
+      padding: 3px 12px;
+      letter-spacing: 0.1em;
+    }
+
+    h1 {
+      font-size: 32px;
+      font-weight: 800;
+      color: var(--accent);
+    }
+
+    .subtitle {
+      color: var(--muted);
+      font-size: 14px;
+      margin-top: 6px;
+    }
+
+    .header { text-align: center; }
+
+    .cards {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 16px;
+      width: 100%;
+      max-width: 720px;
+    }
+
+    .card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 20px 24px;
+    }
+
+    .card-label {
+      font-size: 11px;
+      color: var(--muted);
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      margin-bottom: 8px;
+    }
+
+    .card-value {
+      font-size: 22px;
+      font-weight: 700;
+      color: var(--accent);
+    }
+
+    .card-note {
+      font-size: 11px;
+      color: var(--muted);
+      margin-top: 4px;
+    }
+
+    .infra {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 20px 28px;
+      width: 100%;
+      max-width: 720px;
+    }
+
+    .infra h2 {
+      font-size: 13px;
+      font-weight: 700;
+      color: var(--muted);
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      margin-bottom: 16px;
+    }
+
+    .infra-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 8px 0;
+      border-bottom: 1px solid var(--border);
+      font-size: 13px;
+    }
+
+    .infra-row:last-child { border-bottom: none; }
+
+    .infra-row .key { color: var(--muted); }
+    .infra-row .val { color: var(--green); font-family: monospace; font-size: 12px; }
+
+    footer {
+      color: var(--muted);
+      font-size: 11px;
+    }
+  </style>
+</head>
+<body>
+
+  <div class="header">
+    <div class="badge">LIVE</div>
+    <h1>My Dashboard</h1>
+    <p class="subtitle">S3 + CloudFront によるプライベートページ</p>
+  </div>
+
+  <div class="cards">
+    <div class="card">
+      <div class="card-label">ページ数</div>
+      <div class="card-value">1</div>
+      <div class="card-note">コンテンツは後から追加</div>
+    </div>
+    <div class="card">
+      <div class="card-label">ホスティング</div>
+      <div class="card-value">S3</div>
+      <div class="card-note">CloudFront 経由で配信</div>
+    </div>
+    <div class="card">
+      <div class="card-label">IaC</div>
+      <div class="card-value">Terraform</div>
+      <div class="card-note">インフラをコードで管理</div>
+    </div>
+  </div>
+
+  <div class="infra">
+    <h2>インフラ構成</h2>
+    <div class="infra-row">
+      <span class="key">Storage</span>
+      <span class="val">aws_s3_bucket</span>
+    </div>
+    <div class="infra-row">
+      <span class="key">CDN</span>
+      <span class="val">aws_cloudfront_distribution</span>
+    </div>
+    <div class="infra-row">
+      <span class="key">アクセス制御</span>
+      <span class="val">Origin Access Control (OAC)</span>
+    </div>
+    <div class="infra-row">
+      <span class="key">プロトコル</span>
+      <span class="val">HTTPS only (redirect)</span>
+    </div>
+    <div class="infra-row">
+      <span class="key">S3 パブリックアクセス</span>
+      <span class="val">すべてブロック</span>
+    </div>
+  </div>
+
+  <footer id="ts"></footer>
+
+  <script>
+    document.getElementById('ts').textContent =
+      '最終更新: ' + new Date().toLocaleString('ja-JP');
+  </script>
+
+</body>
+</html>
