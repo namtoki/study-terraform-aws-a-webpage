@@ -7,5 +7,5 @@ variable "aws_region" {
 variable "project_name" {
   description = "Project name used as prefix for resources"
   type        = string
-  default     = "stock-dashboard"
+  default     = "terraform-aws-test"
 }

@@ -1,6 +1,6 @@
 # ─── S3 ─────────────────────────────────────────────────────────────────────
 
-resource "aws_s3_bucket" "dashboard" {
+resource "aws_s3_bucket" "terraaws" {
   bucket_prefix = "${var.project_name}-"
 
   tags = {
@@ -8,8 +8,8 @@ resource "aws_s3_bucket" "dashboard" {
   }
 }
 
-resource "aws_s3_bucket_public_access_block" "dashboard" {
-  bucket = aws_s3_bucket.dashboard.id
+resource "aws_s3_bucket_public_access_block" "terraaws" {
+  bucket = aws_s3_bucket.terraaws.id
 
   block_public_acls       = true
   block_public_policy     = true
@@ -17,8 +17,8 @@ resource "aws_s3_bucket_public_access_block" "dashboard" {
   restrict_public_buckets = true
 }
 
-resource "aws_s3_bucket_versioning" "dashboard" {
-  bucket = aws_s3_bucket.dashboard.id
+resource "aws_s3_bucket_versioning" "terraaws" {
+  bucket = aws_s3_bucket.terraaws.id
   versioning_configuration {
     status = "Enabled"
   }
@@ -26,23 +26,23 @@ resource "aws_s3_bucket_versioning" "dashboard" {
 
 # ─── CloudFront ──────────────────────────────────────────────────────────────
 
-resource "aws_cloudfront_origin_access_control" "dashboard" {
+resource "aws_cloudfront_origin_access_control" "terraaws" {
   name                              = "${var.project_name}-oac"
   origin_access_control_origin_type = "s3"
   signing_behavior                  = "always"
   signing_protocol                  = "sigv4"
 }
 
-resource "aws_cloudfront_distribution" "dashboard" {
+resource "aws_cloudfront_distribution" "terraaws" {
   origin {
-    domain_name              = aws_s3_bucket.dashboard.bucket_regional_domain_name
+    domain_name              = aws_s3_bucket.terraaws.bucket_regional_domain_name
     origin_id                = "S3Origin"
-    origin_access_control_id = aws_cloudfront_origin_access_control.dashboard.id
+    origin_access_control_id = aws_cloudfront_origin_access_control.terraaws.id
   }
 
   enabled             = true
   default_root_object = "index.html"
-  comment             = "Stock Dashboard (private)"
+  comment             = "Stock terraaws (private)"
 
   default_cache_behavior {
     allowed_methods        = ["GET", "HEAD"]
@@ -87,8 +87,8 @@ resource "aws_cloudfront_distribution" "dashboard" {
 
 # ─── S3 バケットポリシー (CloudFront OAC のみ許可) ───────────────────────────
 
-resource "aws_s3_bucket_policy" "dashboard" {
-  bucket = aws_s3_bucket.dashboard.id
+resource "aws_s3_bucket_policy" "terraaws" {
+  bucket = aws_s3_bucket.terraaws.id
 
   policy = jsonencode({
     Version = "2012-10-17"
@@ -100,10 +100,10 @@ resource "aws_s3_bucket_policy" "dashboard" {
           Service = "cloudfront.amazonaws.com"
         }
         Action   = "s3:GetObject"
-        Resource = "${aws_s3_bucket.dashboard.arn}/*"
+        Resource = "${aws_s3_bucket.terraaws.arn}/*"
         Condition = {
           StringEquals = {
-            "AWS:SourceArn" = aws_cloudfront_distribution.dashboard.arn
+            "AWS:SourceArn" = aws_cloudfront_distribution.terraaws.arn
           }
         }
       }
@@ -111,5 +111,5 @@ resource "aws_s3_bucket_policy" "dashboard" {
   })
 
   # public access block を先に適用してからポリシーをアタッチ
-  depends_on = [aws_s3_bucket_public_access_block.dashboard]
+  depends_on = [aws_s3_bucket_public_access_block.terraaws]
 }
