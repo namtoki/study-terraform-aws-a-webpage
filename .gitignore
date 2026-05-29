@@ -6,5 +6,9 @@ terraform.tfstate.backup
 override.tf
 override.tf.json
 
+# Lambda build artifacts
+lambda/*.zip
+.deploy_tmp/
+
 # macOS
 .DS_Store

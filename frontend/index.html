@@ -125,6 +125,45 @@
       color: var(--muted);
       font-size: 11px;
     }
+
+    .api-box {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 20px 28px;
+      width: 100%;
+      max-width: 720px;
+    }
+
+    .api-box h2 {
+      font-size: 13px;
+      font-weight: 700;
+      color: var(--muted);
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      margin-bottom: 16px;
+    }
+
+    #api-btn {
+      padding: 8px 20px;
+      background: var(--accent);
+      color: #0f1117;
+      border: none;
+      border-radius: 6px;
+      font-size: 13px;
+      font-weight: 700;
+      cursor: pointer;
+    }
+
+    #api-btn:hover { opacity: 0.85; }
+
+    #api-result {
+      margin-top: 14px;
+      font-family: monospace;
+      font-size: 12px;
+      color: var(--green);
+      min-height: 20px;
+    }
   </style>
 </head>
 <body>
@@ -177,11 +216,31 @@
     </div>
   </div>
 
+  <div class="api-box">
+    <h2>Lambda API デモ</h2>
+    <button id="api-btn">GET /hello を叩く</button>
+    <div id="api-result">← ボタンを押すとサーバー側の時刻が返ってきます</div>
+  </div>
+
   <footer id="ts"></footer>
 
   <script>
     document.getElementById('ts').textContent =
       '最終更新: ' + new Date().toLocaleString('ja-JP');
+
+    const API_ENDPOINT = '__API_ENDPOINT__';
+
+    document.getElementById('api-btn').addEventListener('click', async () => {
+      const result = document.getElementById('api-result');
+      result.textContent = '呼び出し中...';
+      try {
+        const res = await fetch(API_ENDPOINT);
+        const data = await res.json();
+        result.textContent = JSON.stringify(data, null, 2);
+      } catch (e) {
+        result.textContent = 'エラー: ' + e.message;
+      }
+    });
   </script>
 
 </body>

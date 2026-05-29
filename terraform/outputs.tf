@@ -12,3 +12,8 @@ output "cloudfront_distribution_id" {
   description = "CloudFront distribution ID (キャッシュ削除に使用)"
   value       = aws_cloudfront_distribution.terraaws.id
 }
+
+output "api_endpoint" {
+  description = "API Gateway エンドポイント URL"
+  value       = "${aws_apigatewayv2_stage.default.invoke_url}/hello"
+}
