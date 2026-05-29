@@ -3,7 +3,6 @@
 S3 + CloudFront + Lambda + API Gateway を Terraform で構築する学習プロジェクト。
 
 ## 構成
-
 ```
 .
 ├── terraform/
