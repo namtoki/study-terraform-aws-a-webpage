@@ -2,6 +2,7 @@
 
 resource "aws_s3_bucket" "terraaws" {
   bucket_prefix = "${var.project_name}-"
+  force_destroy = true
 
   tags = {
     Project = var.project_name
