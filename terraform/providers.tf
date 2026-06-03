@@ -10,6 +10,14 @@ terraform {
     }
   }
   required_version = ">= 1.5"
+
+  backend "s3" {
+    bucket         = "terraform-aws-test-tfstate"
+    key            = "terraform.tfstate"
+    region         = "ap-northeast-1"
+    dynamodb_table = "terraform-aws-test-tflock"
+    encrypt        = true
+  }
 }
 
 provider "aws" {

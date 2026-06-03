@@ -1,8 +1,45 @@
 # study-terraform-aws-a-webpage
 
-S3 + CloudFront + Lambda + API Gateway を Terraform で構築する学習プロジェクト。
+Terraform × AWS のスタディプロジェクト。静的サイトから始まり、Rails + ECS + RDS のフルスタック構成まで段階的に構築する。
 
-## 構成
+## スタディフェーズ
+
+### 完了
+
+| フェーズ | 内容 |
+|---|---|
+| Phase 1 | S3 + CloudFront（静的サイト配信） |
+| Phase 3 | Lambda + API Gateway v2（動的 API） |
+
+### 予定
+
+| フェーズ | 内容 | 主要リソース |
+|---|---|---|
+| Phase 4 | Remote State | S3 + DynamoDB |
+| Phase 5 | VPC | VPC / Subnet / NAT Gateway / IGW |
+| Phase 6 | ECR + Docker | ECR / Dockerfile（Rails） |
+| Phase 7 | RDS | RDS PostgreSQL / Security Group |
+| Phase 8 | ECS Fargate + ALB | ECS / ALB / IAM |
+| Phase 9 | CloudFront + カスタムドメイン | Route 53 / ACM / CloudFront |
+| Phase 10 | ElastiCache | Redis（セッション / Sidekiq） |
+| Phase 11 | CI/CD | GitHub Actions / OIDC |
+| Phase 12 | 環境分離 | dev / prod モジュール構成 |
+
+### 最終アーキテクチャ（Phase 12 完了時）
+
+```
+Internet
+  ↓
+Route 53 → CloudFront → ALB → ECS Fargate (Rails)
+                                    ↓           ↓
+                                   RDS      ElastiCache
+                                (PostgreSQL)   (Redis)
+                    S3 ← Active Storage（画像等）
+```
+
+---
+
+## 現在の構成
 ```
 .
 ├── terraform/
@@ -19,7 +56,7 @@ S3 + CloudFront + Lambda + API Gateway を Terraform で構築する学習プロ
 └── deploy.sh           # S3 アップロード + CF キャッシュ削除
 ```
 
-## AWS 構成
+## AWS 構成（現在）
 
 ### 静的サイト（Phase 1）
 
