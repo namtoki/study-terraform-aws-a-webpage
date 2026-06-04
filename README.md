@@ -10,12 +10,12 @@ Terraform × AWS のスタディプロジェクト。静的サイトから始ま
 |---|---|
 | Phase 1 | S3 + CloudFront（静的サイト配信） |
 | Phase 3 | Lambda + API Gateway v2（動的 API） |
+| Phase 4 | Remote State（S3 + DynamoDB によるバックエンド） |
 
 ### 予定
 
 | フェーズ | 内容 | 主要リソース |
 |---|---|---|
-| Phase 4 | Remote State | S3 + DynamoDB |
 | Phase 5 | VPC | VPC / Subnet / NAT Gateway / IGW |
 | Phase 6 | ECR + Docker | ECR / Dockerfile（Rails） |
 | Phase 7 | RDS | RDS PostgreSQL / Security Group |
@@ -40,23 +40,37 @@ Route 53 → CloudFront → ALB → ECS Fargate (Rails)
 ---
 
 ## 現在の構成
+
 ```
 .
 ├── terraform/
-│   ├── providers.tf    # AWS / archive プロバイダー設定
-│   ├── variables.tf    # 変数定義
-│   ├── main.tf         # S3 + CloudFront + OAC + バケットポリシー
-│   ├── lambda.tf       # IAM Role + Lambda 関数
-│   ├── apigateway.tf   # API Gateway v2 (HTTP API)
-│   └── outputs.tf      # URL・バケット名・API エンドポイントの出力
+│   ├── bootstrap/          # Remote State 用リソース（S3 + DynamoDB）
+│   │   ├── providers.tf
+│   │   ├── main.tf
+│   │   └── outputs.tf
+│   ├── providers.tf        # AWS / archive プロバイダー / S3 バックエンド設定
+│   ├── variables.tf        # 変数定義
+│   ├── main.tf             # S3 + CloudFront + OAC + バケットポリシー
+│   ├── lambda.tf           # IAM Role + Lambda 関数
+│   ├── apigateway.tf       # API Gateway v2 (HTTP API)
+│   └── outputs.tf          # URL・バケット名・API エンドポイントの出力
 ├── frontend/
-│   └── index.html      # デプロイするページ（API 呼び出しデモ含む）
+│   └── index.html          # デプロイするページ（API 呼び出しデモ含む）
 ├── lambda/
-│   └── handler.py      # Lambda 関数コード（Python）
-└── deploy.sh           # S3 アップロード + CF キャッシュ削除
+│   └── handler.py          # Lambda 関数コード（Python）
+└── deploy.sh               # S3 アップロード + CF キャッシュ削除
 ```
 
 ## AWS 構成（現在）
+
+### Remote State（Phase 4）
+
+| リソース | 説明 |
+|---|---|
+| `aws_s3_bucket` | tfstate 保存先（バージョニング・暗号化有効） |
+| `aws_dynamodb_table` | state ロック用テーブル（LockID） |
+
+bootstrap/ は独立した Terraform ルート。ローカル state で管理し、本体の backend に使う S3/DynamoDB を事前作成する。
 
 ### 静的サイト（Phase 1）
 
@@ -84,10 +98,21 @@ Route 53 → CloudFront → ALB → ECS Fargate (Rails)
 
 ## コマンドライン一覧
 
+### Bootstrap（初回のみ・1回だけ）
+
+```bash
+# Remote State 用の S3 バケット・DynamoDB テーブルを作成
+cd terraform/bootstrap
+terraform init
+terraform apply
+
+# 作成されたバケット名を確認して providers.tf に反映
+terraform output tfstate_bucket
+```
+
 ### 初回セットアップ（1回だけ）
 
 ```bash
-# Terraform の初期化（プロバイダーのダウンロード）
 cd terraform
 terraform init
 ```
@@ -184,7 +209,7 @@ terraform plan
 
 | シナリオ | コマンド |
 |---|---|
-| 初回構築 | `terraform init` → `terraform apply` → `./deploy.sh` |
+| 初回構築 | bootstrap `apply` → `terraform init` → `terraform apply` → `./deploy.sh` |
 | ページ内容を更新 | `./deploy.sh` |
 | Lambda コードを更新 | `lambda/handler.py` を編集 → `terraform apply` → `./deploy.sh` |
 | Terraform の設定を変えた | `terraform plan` → `terraform apply` |
