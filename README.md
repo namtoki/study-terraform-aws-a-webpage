@@ -18,23 +18,33 @@ Terraform × AWS のスタディプロジェクト。静的サイトから始ま
 
 | フェーズ | 内容 | 主要リソース |
 |---|---|---|
-| Phase 7 | RDS | RDS PostgreSQL / Security Group |
-| Phase 8 | ECS Fargate + ALB | ECS / ALB / IAM |
-| Phase 9 | CloudFront + カスタムドメイン | Route 53 / ACM / CloudFront |
-| Phase 10 | ElastiCache | Redis（セッション / Sidekiq） |
-| Phase 11 | CI/CD | GitHub Actions / OIDC |
-| Phase 12 | 環境分離 | dev / prod モジュール構成 |
+| Phase 7  | RDS | RDS PostgreSQL / Security Group |
+| Phase 8  | ECS Fargate + ALB | ECS / ALB / IAM |
+| Phase 9  | Cognito | ユーザー登録・認証 / ALB 連携 |
+| Phase 10 | CloudFront + カスタムドメイン | Route 53 / ACM / CloudFront |
+| Phase 11 | ElastiCache | Redis（セッション / Sidekiq） |
+| Phase 12 | OpenSearch | 機器・組み合わせの全文検索 |
+| Phase 13 | Bedrock | AI による互換性・音質予想 |
+| Phase 14 | CI/CD | GitHub Actions / OIDC |
+| Phase 15 | 環境分離 | dev / prod モジュール構成 |
 
-### 最終アーキテクチャ（Phase 12 完了時）
+Phase 15 完了以降はアプリ開発（高級オーディオ情報サイト）に注力。
+
+### 最終アーキテクチャ（Phase 15 完了時）
 
 ```
 Internet
   ↓
-Route 53 → CloudFront → ALB → ECS Fargate (Rails)
-                                    ↓           ↓
-                                   RDS      ElastiCache
-                                (PostgreSQL)   (Redis)
-                    S3 ← Active Storage（画像等）
+Route 53 → CloudFront → ALB → Cognito（認証）
+                                    ↓
+                               ECS Fargate (Rails)
+                                    ↓              ↓
+                                   RDS         ElastiCache
+                                (PostgreSQL)     (Redis)
+                                    ↓
+                               OpenSearch（機器検索）
+                               Bedrock（AI 音質予想）
+                    S3 ← Active Storage（機器画像・ユーザー写真）
 ```
 
 ---
