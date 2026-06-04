@@ -1,6 +1,23 @@
 # study-terraform-aws-a-webpage
 
-Terraform × AWS のスタディプロジェクト。静的サイトから始まり、Rails + ECS + RDS のフルスタック構成まで段階的に構築する。
+Terraform × AWS のスタディプロジェクト。静的サイトから始まり、Rails API + ECS + RDS のフルスタック構成まで段階的に構築する。
+最終的には高級オーディオ情報サイトを Web / iOS / Android のマルチクライアントで提供する。
+
+## アプリ構成（API ファースト）
+
+```
+                    ┌─ Web    : Next.js (React + TypeScript)
+Cognito（統一認証）─┼─ iOS    : React Native (Expo)
+        ↓           └─ Android: React Native (Expo)
+   Rails API モード (ECS Fargate)  ← JSON のみ返す
+        ↓
+   RDS / S3 / OpenSearch / Bedrock
+```
+
+- **Web**: Next.js（React + TypeScript）
+- **Mobile**: React Native (Expo) — Web と React/TS を共有
+- **Backend**: Rails API モード（HTML を返さず JSON API を提供）
+- **Auth**: Cognito（Web・iOS・Android で統一）
 
 ## スタディフェーズ
 
@@ -18,19 +35,31 @@ Terraform × AWS のスタディプロジェクト。静的サイトから始ま
 
 | フェーズ | 内容 | 主要リソース |
 |---|---|---|
-| Phase 7  | RDS | RDS PostgreSQL / Security Group |
+| Phase 7  | RDS + Secrets 管理 | RDS PostgreSQL / Secrets Manager / SSM Parameter Store |
 | Phase 8  | ECS Fargate + ALB | ECS / ALB / IAM |
 | Phase 9  | Cognito | ユーザー登録・認証 / ALB 連携 |
 | Phase 10 | CloudFront + カスタムドメイン | Route 53 / ACM / CloudFront |
 | Phase 11 | ElastiCache | Redis（セッション / Sidekiq） |
-| Phase 12 | OpenSearch | 機器・組み合わせの全文検索 |
-| Phase 13 | Bedrock | AI による互換性・音質予想 |
-| Phase 14 | CI/CD | GitHub Actions / OIDC |
-| Phase 15 | 環境分離 | dev / prod モジュール構成 |
+| Phase 12 | 監視・トレーシング | CloudWatch（アラーム/ダッシュボード）/ X-Ray / EventBridge |
+| Phase 13 | 非同期処理 | SQS / SNS / Step Functions |
+| Phase 14 | OpenSearch | 機器・組み合わせの全文検索 |
+| Phase 15 | Bedrock | AI による互換性・音質予想 |
+| Phase 16 | 運用自動化・信頼性 | Systems Manager / AWS Config / CloudTrail / AWS Backup / RDS Multi-AZ・リードレプリカ / Auto Scaling |
+| Phase 17 | CI/CD | CodePipeline / CodeBuild / CodeDeploy / GitHub Actions / OIDC |
+| Phase 18 | 環境分離 | dev / prod モジュール構成 |
 
-Phase 15 完了以降はアプリ開発（高級オーディオ情報サイト）に注力。
+Phase 18 完了以降はアプリ開発（高級オーディオ情報サイト）に注力。
 
-### 最終アーキテクチャ（Phase 15 完了時）
+### 取得予定の AWS 認定
+
+保有: CLF / AIF / SAA。本プロジェクトを通じて以下を取得予定。
+
+| 認定 | 主な対応フェーズ |
+|---|---|
+| **Developer Associate (DVA-C02)** | Lambda / API GW / DynamoDB / ECS / Cognito（Phase 3・6〜9）/ Secrets（7）/ X-Ray（12）/ SQS・SNS・Step Functions（13）/ CI/CD（17） |
+| **SysOps Administrator (SOA-C02)** | VPC（5）/ 監視（12）/ 運用自動化・信頼性（16）/ CloudFront・Route 53（10） |
+
+### 最終アーキテクチャ（Phase 18 完了時）
 
 ```
 Internet
@@ -40,11 +69,16 @@ Route 53 → CloudFront → ALB → Cognito（認証）
                                ECS Fargate (Rails)
                                     ↓              ↓
                                    RDS         ElastiCache
-                                (PostgreSQL)     (Redis)
+                              (PostgreSQL       (Redis)
+                               Multi-AZ)
                                     ↓
                                OpenSearch（機器検索）
                                Bedrock（AI 音質予想）
                     S3 ← Active Storage（機器画像・ユーザー写真）
+
+  非同期: ECS/Lambda → SQS/SNS → Step Functions（組み合わせ DB 更新・AI 予想）
+  監視:   CloudWatch / X-Ray / EventBridge / CloudTrail / AWS Config
+  運用:   Systems Manager / AWS Backup / Secrets Manager
 ```
 
 ---
