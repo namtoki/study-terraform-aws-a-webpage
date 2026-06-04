@@ -11,12 +11,13 @@ Terraform × AWS のスタディプロジェクト。静的サイトから始ま
 | Phase 1 | S3 + CloudFront（静的サイト配信） |
 | Phase 3 | Lambda + API Gateway v2（動的 API） |
 | Phase 4 | Remote State（S3 + DynamoDB によるバックエンド） |
+| Phase 5 | VPC（terraform-aws-modules/vpc） |
 
 ### 予定
 
 | フェーズ | 内容 | 主要リソース |
 |---|---|---|
-| Phase 5 | VPC | VPC / Subnet / NAT Gateway / IGW |
+| Phase 6 | ECR + Docker | ECR / Dockerfile（Rails） |
 | Phase 6 | ECR + Docker | ECR / Dockerfile（Rails） |
 | Phase 7 | RDS | RDS PostgreSQL / Security Group |
 | Phase 8 | ECS Fargate + ALB | ECS / ALB / IAM |
@@ -51,6 +52,7 @@ Route 53 → CloudFront → ALB → ECS Fargate (Rails)
 │   ├── providers.tf        # AWS / archive プロバイダー / S3 バックエンド設定
 │   ├── variables.tf        # 変数定義
 │   ├── main.tf             # S3 + CloudFront + OAC + バケットポリシー
+│   ├── vpc.tf              # VPC + Subnet + IGW + NAT Gateway（公式モジュール）
 │   ├── lambda.tf           # IAM Role + Lambda 関数
 │   ├── apigateway.tf       # API Gateway v2 (HTTP API)
 │   └── outputs.tf          # URL・バケット名・API エンドポイントの出力
@@ -80,6 +82,12 @@ bootstrap/ は独立した Terraform ルート。ローカル state で管理し
 | `aws_cloudfront_distribution` | HTTPS 配信・CDN |
 | `aws_cloudfront_origin_access_control` | CloudFront のみ S3 へアクセス可能にする OAC |
 | `aws_s3_bucket_policy` | OAC 経由のアクセスのみ許可するバケットポリシー |
+
+### VPC（Phase 5）
+
+| リソース | 説明 |
+|---|---|
+| `module "vpc"` | VPC / Public・Private Subnet × 2AZ / IGW / NAT Gateway / Route Table（terraform-aws-modules/vpc） |
 
 ### Lambda + API Gateway（Phase 3）
 
