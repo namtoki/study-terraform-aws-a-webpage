@@ -12,13 +12,12 @@ Terraform × AWS のスタディプロジェクト。静的サイトから始ま
 | Phase 3 | Lambda + API Gateway v2（動的 API） |
 | Phase 4 | Remote State（S3 + DynamoDB によるバックエンド） |
 | Phase 5 | VPC（terraform-aws-modules/vpc） |
+| Phase 6 | ECR + Docker（コンテナイメージ保管） |
 
 ### 予定
 
 | フェーズ | 内容 | 主要リソース |
 |---|---|---|
-| Phase 6 | ECR + Docker | ECR / Dockerfile（Rails） |
-| Phase 6 | ECR + Docker | ECR / Dockerfile（Rails） |
 | Phase 7 | RDS | RDS PostgreSQL / Security Group |
 | Phase 8 | ECS Fargate + ALB | ECS / ALB / IAM |
 | Phase 9 | CloudFront + カスタムドメイン | Route 53 / ACM / CloudFront |
@@ -53,9 +52,12 @@ Route 53 → CloudFront → ALB → ECS Fargate (Rails)
 │   ├── variables.tf        # 変数定義
 │   ├── main.tf             # S3 + CloudFront + OAC + バケットポリシー
 │   ├── vpc.tf              # VPC + Subnet + IGW + NAT Gateway（公式モジュール）
+│   ├── ecr.tf              # ECR リポジトリ + ライフサイクルポリシー
 │   ├── lambda.tf           # IAM Role + Lambda 関数
 │   ├── apigateway.tf       # API Gateway v2 (HTTP API)
 │   └── outputs.tf          # URL・バケット名・API エンドポイントの出力
+├── app/
+│   └── Dockerfile          # Rails アプリのコンテナ定義
 ├── frontend/
 │   └── index.html          # デプロイするページ（API 呼び出しデモ含む）
 ├── lambda/
@@ -82,6 +84,13 @@ bootstrap/ は独立した Terraform ルート。ローカル state で管理し
 | `aws_cloudfront_distribution` | HTTPS 配信・CDN |
 | `aws_cloudfront_origin_access_control` | CloudFront のみ S3 へアクセス可能にする OAC |
 | `aws_s3_bucket_policy` | OAC 経由のアクセスのみ許可するバケットポリシー |
+
+### ECR（Phase 6）
+
+| リソース | 説明 |
+|---|---|
+| `aws_ecr_repository` | コンテナイメージの保存先 |
+| `aws_ecr_lifecycle_policy` | 最新 10 世代のみ保持（古いイメージを自動削除） |
 
 ### VPC（Phase 5）
 

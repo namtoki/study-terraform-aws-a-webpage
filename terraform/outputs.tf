@@ -17,3 +17,8 @@ output "api_endpoint" {
   description = "API Gateway エンドポイント URL"
   value       = "${aws_apigatewayv2_stage.default.invoke_url}/hello"
 }
+
+output "ecr_repository_url" {
+  description = "ECR リポジトリ URL（docker push 先）"
+  value       = aws_ecr_repository.app.repository_url
+}
