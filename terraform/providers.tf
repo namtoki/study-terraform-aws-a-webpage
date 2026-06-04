@@ -12,7 +12,7 @@ terraform {
   required_version = ">= 1.5"
 
   backend "s3" {
-    bucket         = "terraform-aws-test-tfstate"
+    bucket         = "terraform-aws-test-tfstate-003272771231"
     key            = "terraform.tfstate"
     region         = "ap-northeast-1"
     dynamodb_table = "terraform-aws-test-tflock"

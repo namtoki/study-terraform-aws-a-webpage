@@ -1,7 +1,9 @@
 # ─── S3 (Terraform state 保存先) ─────────────────────────────────────────────
 
+data "aws_caller_identity" "current" {}
+
 resource "aws_s3_bucket" "tfstate" {
-  bucket        = "terraform-aws-test-tfstate"
+  bucket        = "terraform-aws-test-tfstate-${data.aws_caller_identity.current.account_id}"
   force_destroy = true
 }
 
