@@ -22,3 +22,13 @@ output "ecr_repository_url" {
   description = "ECR リポジトリ URL（docker push 先）"
   value       = aws_ecr_repository.app.repository_url
 }
+
+output "rds_endpoint" {
+  description = "RDS の接続先エンドポイント（host:port）"
+  value       = aws_db_instance.main.endpoint
+}
+
+output "db_master_secret_arn" {
+  description = "RDS マスターユーザーの認証情報（AWS が Secrets Manager で自動管理）の ARN"
+  value       = aws_db_instance.main.master_user_secret[0].secret_arn
+}

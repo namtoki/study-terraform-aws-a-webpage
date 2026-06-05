@@ -30,12 +30,12 @@ Cognito（統一認証）─┼─ iOS    : React Native (Expo)
 | Phase 4 | Remote State（S3 + DynamoDB によるバックエンド） |
 | Phase 5 | VPC（terraform-aws-modules/vpc） |
 | Phase 6 | ECR + Docker（コンテナイメージ保管） |
+| Phase 7 | RDS + Secrets 管理（コード確定済み・未 apply） |
 
 ### 予定
 
 | フェーズ | 内容 | 主要リソース |
 |---|---|---|
-| Phase 7  | RDS + Secrets 管理 | RDS PostgreSQL / Secrets Manager / SSM Parameter Store |
 | Phase 8  | ECS Fargate + ALB | ECS / ALB / IAM |
 | Phase 9  | Cognito | ユーザー登録・認証 / ALB 連携 |
 | Phase 10 | CloudFront + カスタムドメイン | Route 53 / ACM / CloudFront |
@@ -97,6 +97,7 @@ Route 53 → CloudFront → ALB → Cognito（認証）
 │   ├── main.tf             # S3 + CloudFront + OAC + バケットポリシー
 │   ├── vpc.tf              # VPC + Subnet + IGW + NAT Gateway（公式モジュール）
 │   ├── ecr.tf              # ECR リポジトリ + ライフサイクルポリシー
+│   ├── rds.tf              # RDS PostgreSQL + Secrets Manager + SSM Parameter
 │   ├── lambda.tf           # IAM Role + Lambda 関数
 │   ├── apigateway.tf       # API Gateway v2 (HTTP API)
 │   └── outputs.tf          # URL・バケット名・API エンドポイントの出力
@@ -141,6 +142,17 @@ bootstrap/ は独立した Terraform ルート。ローカル state で管理し
 | リソース | 説明 |
 |---|---|
 | `module "vpc"` | VPC / Public・Private Subnet × 2AZ / IGW / NAT Gateway / Route Table（terraform-aws-modules/vpc） |
+
+### RDS + Secrets（Phase 7）※コード確定済み・未 apply
+
+| リソース | 説明 |
+|---|---|
+| `random_password` | DB パスワードを自動生成（英数字 32 桁） |
+| `aws_db_subnet_group` | RDS を Private Subnet に配置 |
+| `aws_security_group.rds` | VPC 内からの PostgreSQL(5432) のみ許可 |
+| `aws_db_instance` | PostgreSQL 16 / db.t4g.micro / ストレージ暗号化 / 非公開 |
+| `aws_secretsmanager_secret` | DB 接続情報（user/pass/host/port/dbname）を JSON で保管 |
+| `aws_ssm_parameter` | 非機密の設定値（RAILS_ENV など） |
 
 ### Lambda + API Gateway（Phase 3）
 
