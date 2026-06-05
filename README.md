@@ -32,12 +32,12 @@ Cognito（統一認証）─┼─ iOS    : React Native (Expo)
 | Phase 6 | ECR + Docker（コンテナイメージ保管） |
 | Phase 7 | RDS + Secrets 管理（コード確定済み・未 apply） |
 | Phase 8 | ECS Fargate + ALB（コード確定済み・未 apply） |
+| Phase 9 | Cognito（ユーザー認証 / アプリ側 JWT 検証）（コード確定済み・未 apply） |
 
 ### 予定
 
 | フェーズ | 内容 | 主要リソース |
 |---|---|---|
-| Phase 9  | Cognito | ユーザー登録・認証 / ALB 連携 |
 | Phase 10 | CloudFront + カスタムドメイン | Route 53 / ACM / CloudFront |
 | Phase 11 | ElastiCache | Redis（セッション / Sidekiq） |
 | Phase 12 | 監視・トレーシング | CloudWatch（アラーム/ダッシュボード）/ X-Ray / EventBridge |
@@ -100,6 +100,7 @@ Route 53 → CloudFront → ALB → Cognito（認証）
 │   ├── rds.tf              # RDS PostgreSQL + Secrets Manager + SSM Parameter
 │   ├── alb.tf              # ALB + Target Group + Listener + SG
 │   ├── ecs.tf              # ECS Cluster + Task Definition + Service + IAM Role
+│   ├── cognito.tf          # Cognito User Pool + App Client（Web/Mobile）
 │   ├── lambda.tf           # IAM Role + Lambda 関数
 │   ├── apigateway.tf       # API Gateway v2 (HTTP API)
 │   └── outputs.tf          # URL・バケット名・API エンドポイントの出力
@@ -171,6 +172,17 @@ bootstrap/ は独立した Terraform ルート。ローカル state で管理し
 | `aws_security_group`（alb / ecs） | Internet→ALB→ECS→RDS の SG チェーン |
 
 SG チェーンで最小権限を実現: `ALB(80) → ECS(3000, ALB のみ) → RDS(5432, ECS のみ)`。
+
+### Cognito（Phase 9）※コード確定済み・未 apply
+
+| リソース | 説明 |
+|---|---|
+| `aws_cognito_user_pool` | ユーザーディレクトリ（メールログイン / パスワードポリシー / メール検証） |
+| `aws_cognito_user_pool_domain` | Hosted UI / トークンエンドポイント |
+| `aws_cognito_user_pool_client.web` | Web(Next.js) 用・公開クライアント(PKCE) |
+| `aws_cognito_user_pool_client.mobile` | Mobile(Expo) 用・公開クライアント(PKCE) |
+
+認証方式は **アプリ側 JWT 検証**: クライアントが Cognito から JWT を取得 → `Bearer` トークンで API を叩き、Rails が署名・iss・aud・exp を検証。Web/iOS/Android で共通のトークンを使う。
 
 ### Lambda + API Gateway（Phase 3）
 

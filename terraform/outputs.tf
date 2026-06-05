@@ -37,3 +37,29 @@ output "alb_url" {
   description = "ALB の URL（Rails アプリのエンドポイント）"
   value       = "http://${aws_lb.main.dns_name}"
 }
+
+output "cognito_user_pool_id" {
+  description = "Cognito User Pool ID"
+  value       = aws_cognito_user_pool.main.id
+}
+
+output "cognito_web_client_id" {
+  description = "Web（Next.js）用 App Client ID"
+  value       = aws_cognito_user_pool_client.web.id
+}
+
+output "cognito_mobile_client_id" {
+  description = "Mobile（Expo）用 App Client ID"
+  value       = aws_cognito_user_pool_client.mobile.id
+}
+
+# Rails 側で JWT を検証するときの issuer。JWKS は {issuer}/.well-known/jwks.json
+output "cognito_issuer" {
+  description = "JWT の発行者 URL（aud=client_id, iss=この値 を検証）"
+  value       = "https://cognito-idp.${var.aws_region}.amazonaws.com/${aws_cognito_user_pool.main.id}"
+}
+
+output "cognito_hosted_ui_domain" {
+  description = "Hosted UI / トークンエンドポイントのドメイン"
+  value       = "https://${aws_cognito_user_pool_domain.main.domain}.auth.${var.aws_region}.amazoncognito.com"
+}
