@@ -9,3 +9,9 @@ variable "project_name" {
   type        = string
   default     = "terraform-aws-test"
 }
+
+variable "container_port" {
+  description = "コンテナ（Rails）が listen するポート"
+  type        = number
+  default     = 3000
+}

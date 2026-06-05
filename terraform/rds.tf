@@ -8,18 +8,18 @@ resource "aws_db_subnet_group" "main" {
   tags = { Project = var.project_name }
 }
 
-# RDS 用 Security Group（VPC 内からの PostgreSQL のみ許可）
+# RDS 用 Security Group（ECS タスクからの PostgreSQL のみ許可）
 resource "aws_security_group" "rds" {
   name        = "${var.project_name}-rds"
-  description = "Allow PostgreSQL from within VPC"
+  description = "Allow PostgreSQL from ECS tasks only"
   vpc_id      = module.vpc.vpc_id
 
   ingress {
-    description = "PostgreSQL from VPC"
-    from_port   = 5432
-    to_port     = 5432
-    protocol    = "tcp"
-    cidr_blocks = [module.vpc.vpc_cidr_block]
+    description     = "PostgreSQL from ECS"
+    from_port       = 5432
+    to_port         = 5432
+    protocol        = "tcp"
+    security_groups = [aws_security_group.ecs.id] # ← ECS の SG からのみ
   }
 
   egress {

@@ -32,3 +32,8 @@ output "db_master_secret_arn" {
   description = "RDS マスターユーザーの認証情報（AWS が Secrets Manager で自動管理）の ARN"
   value       = aws_db_instance.main.master_user_secret[0].secret_arn
 }
+
+output "alb_url" {
+  description = "ALB の URL（Rails アプリのエンドポイント）"
+  value       = "http://${aws_lb.main.dns_name}"
+}

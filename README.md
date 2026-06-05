@@ -31,12 +31,12 @@ Cognito（統一認証）─┼─ iOS    : React Native (Expo)
 | Phase 5 | VPC（terraform-aws-modules/vpc） |
 | Phase 6 | ECR + Docker（コンテナイメージ保管） |
 | Phase 7 | RDS + Secrets 管理（コード確定済み・未 apply） |
+| Phase 8 | ECS Fargate + ALB（コード確定済み・未 apply） |
 
 ### 予定
 
 | フェーズ | 内容 | 主要リソース |
 |---|---|---|
-| Phase 8  | ECS Fargate + ALB | ECS / ALB / IAM |
 | Phase 9  | Cognito | ユーザー登録・認証 / ALB 連携 |
 | Phase 10 | CloudFront + カスタムドメイン | Route 53 / ACM / CloudFront |
 | Phase 11 | ElastiCache | Redis（セッション / Sidekiq） |
@@ -98,6 +98,8 @@ Route 53 → CloudFront → ALB → Cognito（認証）
 │   ├── vpc.tf              # VPC + Subnet + IGW + NAT Gateway（公式モジュール）
 │   ├── ecr.tf              # ECR リポジトリ + ライフサイクルポリシー
 │   ├── rds.tf              # RDS PostgreSQL + Secrets Manager + SSM Parameter
+│   ├── alb.tf              # ALB + Target Group + Listener + SG
+│   ├── ecs.tf              # ECS Cluster + Task Definition + Service + IAM Role
 │   ├── lambda.tf           # IAM Role + Lambda 関数
 │   ├── apigateway.tf       # API Gateway v2 (HTTP API)
 │   └── outputs.tf          # URL・バケット名・API エンドポイントの出力
@@ -147,12 +149,28 @@ bootstrap/ は独立した Terraform ルート。ローカル state で管理し
 
 | リソース | 説明 |
 |---|---|
-| `random_password` | DB パスワードを自動生成（英数字 32 桁） |
 | `aws_db_subnet_group` | RDS を Private Subnet に配置 |
-| `aws_security_group.rds` | VPC 内からの PostgreSQL(5432) のみ許可 |
+| `aws_security_group.rds` | ECS の SG からの PostgreSQL(5432) のみ許可 |
 | `aws_db_instance` | PostgreSQL 16 / db.t4g.micro / ストレージ暗号化 / 非公開 |
-| `aws_secretsmanager_secret` | DB 接続情報（user/pass/host/port/dbname）を JSON で保管 |
-| `aws_ssm_parameter` | 非機密の設定値（RAILS_ENV など） |
+| `manage_master_user_password` | パスワードを AWS が Secrets Manager で自動生成・自動ローテーション |
+| `aws_ssm_parameter` | 非機密の接続情報（host/port/name）と設定値（RAILS_ENV） |
+
+認証は `manage_master_user_password = true` により、AWS 管理の Secrets Manager シークレットを使用（tfstate に平文パスワードが残らない）。
+
+### ALB + ECS Fargate（Phase 8）※コード確定済み・未 apply
+
+| リソース | 説明 |
+|---|---|
+| `aws_lb` | ALB（Public Subnet 配置・HTTP:80） |
+| `aws_lb_target_group` | IP ターゲット（Fargate）/ ヘルスチェック `/up` |
+| `aws_lb_listener` | 80 → Target Group へ転送 |
+| `aws_ecs_cluster` | Fargate クラスター（Container Insights 有効） |
+| `aws_ecs_task_definition` | cpu256/mem512 / Secrets・SSM から環境変数注入 |
+| `aws_ecs_service` | Private Subnet で常時 1 タスク維持・ALB 連携 |
+| `aws_iam_role`（execution / task） | ECR pull・Logs・Secrets 取得 / アプリ権限 |
+| `aws_security_group`（alb / ecs） | Internet→ALB→ECS→RDS の SG チェーン |
+
+SG チェーンで最小権限を実現: `ALB(80) → ECS(3000, ALB のみ) → RDS(5432, ECS のみ)`。
 
 ### Lambda + API Gateway（Phase 3）
 
