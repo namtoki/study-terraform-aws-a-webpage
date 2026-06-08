@@ -33,12 +33,12 @@ Cognito（統一認証）─┼─ iOS    : React Native (Expo)
 | Phase 7 | RDS + Secrets 管理（コード確定済み・未 apply） |
 | Phase 8 | ECS Fargate + ALB（コード確定済み・未 apply） |
 | Phase 9 | Cognito（ユーザー認証 / アプリ側 JWT 検証）（コード確定済み・未 apply） |
+| Phase 10 | CloudFront + カスタムドメイン（コード確定済み・未 apply） |
 
 ### 予定
 
 | フェーズ | 内容 | 主要リソース |
 |---|---|---|
-| Phase 10 | CloudFront + カスタムドメイン | Route 53 / ACM / CloudFront |
 | Phase 11 | ElastiCache | Redis（セッション / Sidekiq） |
 | Phase 12 | 監視・トレーシング | CloudWatch（アラーム/ダッシュボード）/ X-Ray / EventBridge |
 | Phase 13 | 非同期処理 | SQS / SNS / Step Functions |
@@ -101,6 +101,8 @@ Route 53 → CloudFront → ALB → Cognito（認証）
 │   ├── alb.tf              # ALB + Target Group + Listener + SG
 │   ├── ecs.tf              # ECS Cluster + Task Definition + Service + IAM Role
 │   ├── cognito.tf          # Cognito User Pool + App Client（Web/Mobile）
+│   ├── acm.tf              # ACM 証明書（us-east-1）+ DNS 検証レコード
+│   ├── route53.tf          # Hosted Zone + A/AAAA エイリアスレコード
 │   ├── lambda.tf           # IAM Role + Lambda 関数
 │   ├── apigateway.tf       # API Gateway v2 (HTTP API)
 │   └── outputs.tf          # URL・バケット名・API エンドポイントの出力
@@ -183,6 +185,23 @@ SG チェーンで最小権限を実現: `ALB(80) → ECS(3000, ALB のみ) → 
 | `aws_cognito_user_pool_client.mobile` | Mobile(Expo) 用・公開クライアント(PKCE) |
 
 認証方式は **アプリ側 JWT 検証**: クライアントが Cognito から JWT を取得 → `Bearer` トークンで API を叩き、Rails が署名・iss・aud・exp を検証。Web/iOS/Android で共通のトークンを使う。
+
+### CloudFront + カスタムドメイン（Phase 10）※コード確定済み・未 apply
+
+| リソース | 説明 |
+|---|---|
+| `aws_route53_zone` | ドメインの Hosted Zone（ネームサーバーを返す） |
+| `aws_acm_certificate` | SSL/TLS 証明書（us-east-1 / DNS 検証） |
+| `aws_route53_record`（検証用） | ACM の DNS 検証レコードを Route 53 に自動登録 |
+| `aws_acm_certificate_validation` | 証明書の検証完了を待つ |
+| `aws_route53_record`（A/AAAA） | apex + www → CloudFront へのエイリアスレコード |
+| `aws_cloudfront_distribution`（更新） | `aliases` + ACM 証明書を追加 |
+
+apply 手順:
+1. `terraform apply -var domain_name=<your-domain.com>`
+2. `terraform output route53_nameservers` でネームサーバーを確認
+3. ドメインレジストラの NS レコードを Route 53 のネームサーバーに変更
+4. DNS 伝播後（数分〜48時間）、ACM 検証が完了して HTTPS が有効になる
 
 ### Lambda + API Gateway（Phase 3）
 

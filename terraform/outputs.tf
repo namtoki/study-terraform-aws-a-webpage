@@ -63,3 +63,13 @@ output "cognito_hosted_ui_domain" {
   description = "Hosted UI / トークンエンドポイントのドメイン"
   value       = "https://${aws_cognito_user_pool_domain.main.domain}.auth.${var.aws_region}.amazoncognito.com"
 }
+
+output "route53_nameservers" {
+  description = "ドメインレジストラに設定する NS レコード（ここを向けないと Route 53 が機能しない）"
+  value       = aws_route53_zone.main.name_servers
+}
+
+output "custom_domain_url" {
+  description = "カスタムドメインの URL（HTTPS）"
+  value       = "https://${var.domain_name}"
+}
