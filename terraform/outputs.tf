@@ -73,3 +73,8 @@ output "custom_domain_url" {
   description = "カスタムドメインの URL（HTTPS）"
   value       = "https://${var.domain_name}"
 }
+
+output "redis_primary_endpoint" {
+  description = "Redis のプライマリエンドポイント"
+  value       = aws_elasticache_replication_group.main.primary_endpoint_address
+}

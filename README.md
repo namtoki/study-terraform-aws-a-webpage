@@ -23,30 +23,30 @@ Cognito（統一認証）─┼─ iOS    : React Native (Expo)
 
 ### 完了
 
-| フェーズ | 内容 |
-|---|---|
-| Phase 1 | S3 + CloudFront（静的サイト配信） |
-| Phase 3 | Lambda + API Gateway v2（動的 API） |
-| Phase 4 | Remote State（S3 + DynamoDB によるバックエンド） |
-| Phase 5 | VPC（terraform-aws-modules/vpc） |
-| Phase 6 | ECR + Docker（コンテナイメージ保管） |
-| Phase 7 | RDS + Secrets 管理（コード確定済み・未 apply） |
-| Phase 8 | ECS Fargate + ALB（コード確定済み・未 apply） |
-| Phase 9 | Cognito（ユーザー認証 / アプリ側 JWT 検証）（コード確定済み・未 apply） |
-| Phase 10 | CloudFront + カスタムドメイン（コード確定済み・未 apply） |
+| フェーズ | 内容 | 何ができるか |
+|---|---|---|
+| Phase 1 | S3 + CloudFront（静的サイト配信） | 静的ページを HTTPS で世界配信 |
+| Phase 3 | Lambda + API Gateway v2（動的 API） | サーバーレス API エンドポイントが動く |
+| Phase 4 | Remote State（S3 + DynamoDB によるバックエンド） | チーム開発・複数環境で tfstate を安全共有 |
+| Phase 5 | VPC（terraform-aws-modules/vpc） | DB・コンテナをインターネットから隔離した Private Subnet に置ける |
+| Phase 6 | ECR + Docker（コンテナイメージ保管） | Rails コンテナイメージを AWS に保管・バージョン管理できる |
+| Phase 7 | RDS + Secrets 管理（コード確定済み・未 apply） | Rails が接続できる PostgreSQL が Private Subnet に立つ。パスワードは AWS が自動管理 |
+| Phase 8 | ECS Fargate + ALB（コード確定済み・未 apply） | Rails コンテナが常時稼働し、ALB 経由でインターネットから HTTP アクセスできる |
+| Phase 9 | Cognito（ユーザー認証 / アプリ側 JWT 検証）（コード確定済み・未 apply） | Web / iOS / Android で共通のユーザー登録・ログインが動く。Rails API が JWT を検証できる |
+| Phase 10 | CloudFront + カスタムドメイン（コード確定済み・未 apply） | `https://example.com` で HTTPS アクセスできる |
+| Phase 11 | ElastiCache Redis（セッション / Sidekiq）（コード確定済み・未 apply） | Rails のセッション管理・Sidekiq バックグラウンドジョブが動く |
 
 ### 予定
 
-| フェーズ | 内容 | 主要リソース |
-|---|---|---|
-| Phase 11 | ElastiCache | Redis（セッション / Sidekiq） |
-| Phase 12 | 監視・トレーシング | CloudWatch（アラーム/ダッシュボード）/ X-Ray / EventBridge |
-| Phase 13 | 非同期処理 | SQS / SNS / Step Functions |
-| Phase 14 | OpenSearch | 機器・組み合わせの全文検索 |
-| Phase 15 | Bedrock | AI による互換性・音質予想 |
-| Phase 16 | 運用自動化・信頼性 | Systems Manager / AWS Config / CloudTrail / AWS Backup / RDS Multi-AZ・リードレプリカ / Auto Scaling |
-| Phase 17 | CI/CD | CodePipeline / CodeBuild / CodeDeploy / GitHub Actions / OIDC |
-| Phase 18 | 環境分離 | dev / prod モジュール構成 |
+| フェーズ | 内容 | 主要リソース | 何ができるか |
+|---|---|---|---|
+| Phase 12 | 監視・トレーシング | CloudWatch / X-Ray / EventBridge | アラート通知・ボトルネック特定・障害検知ができる |
+| Phase 13 | 非同期処理 | SQS / SNS / Step Functions | 重い処理を非同期化。メール送信・AI 予想ジョブをキューで管理できる |
+| Phase 14 | OpenSearch | OpenSearch Service | 機器名・ブランド・スペックの全文検索が動く |
+| Phase 15 | Bedrock | Amazon Bedrock | AI による機器の互換性・音質の予想 API が動く |
+| Phase 16 | 運用自動化・信頼性 | Systems Manager / AWS Config / CloudTrail / AWS Backup / RDS Multi-AZ・リードレプリカ / Auto Scaling | 障害時の自動復旧・トラフィック増加時の自動スケール・監査ログが揃う |
+| Phase 17 | CI/CD | CodePipeline / CodeBuild / CodeDeploy / GitHub Actions / OIDC | git push だけで自動テスト・自動デプロイが動く |
+| Phase 18 | 環境分離 | dev / prod モジュール構成 | dev と prod を独立した Terraform 構成で管理できる |
 
 Phase 18 完了以降はアプリ開発（高級オーディオ情報サイト）に注力。
 
@@ -103,6 +103,7 @@ Route 53 → CloudFront → ALB → Cognito（認証）
 │   ├── cognito.tf          # Cognito User Pool + App Client（Web/Mobile）
 │   ├── acm.tf              # ACM 証明書（us-east-1）+ DNS 検証レコード
 │   ├── route53.tf          # Hosted Zone + A/AAAA エイリアスレコード
+│   ├── elasticache.tf      # ElastiCache Redis + Subnet Group + SG + SSM
 │   ├── lambda.tf           # IAM Role + Lambda 関数
 │   ├── apigateway.tf       # API Gateway v2 (HTTP API)
 │   └── outputs.tf          # URL・バケット名・API エンドポイントの出力
@@ -202,6 +203,18 @@ apply 手順:
 2. `terraform output route53_nameservers` でネームサーバーを確認
 3. ドメインレジストラの NS レコードを Route 53 のネームサーバーに変更
 4. DNS 伝播後（数分〜48時間）、ACM 検証が完了して HTTPS が有効になる
+
+### ElastiCache Redis（Phase 11）※コード確定済み・未 apply
+
+| リソース | 説明 |
+|---|---|
+| `aws_elasticache_subnet_group` | Redis を Private Subnet に配置 |
+| `aws_security_group.elasticache` | ECS の SG からの Redis(6379) のみ許可 |
+| `aws_elasticache_replication_group` | Redis 7.1 / cache.t4g.micro / シングルノード / 保存暗号化 |
+| `aws_ssm_parameter.redis_url` | `redis://<endpoint>:6379/0` を ECS に注入 |
+
+SG チェーン完成: `ALB(80) → ECS(3000) → RDS(5432) → ElastiCache(6379, ECS のみ)`。
+Rails の `config/cable.yml`・`config/initializers/session_store.rb`・Sidekiq の接続先に `REDIS_URL` 環境変数を使う。
 
 ### Lambda + API Gateway（Phase 3）
 

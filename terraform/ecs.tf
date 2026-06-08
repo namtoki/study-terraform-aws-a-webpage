@@ -71,6 +71,7 @@ data "aws_iam_policy_document" "ecs_secrets" {
       aws_ssm_parameter.db_port.arn,
       aws_ssm_parameter.db_name.arn,
       aws_ssm_parameter.rails_env.arn,
+      aws_ssm_parameter.redis_url.arn,
     ]
   }
 }
@@ -134,6 +135,7 @@ resource "aws_ecs_task_definition" "app" {
         # 認証情報は AWS 管理の Secrets Manager シークレットから JSON キーで取り出す
         { name = "DB_USERNAME", valueFrom = "${aws_db_instance.main.master_user_secret[0].secret_arn}:username::" },
         { name = "DB_PASSWORD", valueFrom = "${aws_db_instance.main.master_user_secret[0].secret_arn}:password::" },
+        { name = "REDIS_URL", valueFrom = aws_ssm_parameter.redis_url.arn },
       ]
 
       logConfiguration = {
