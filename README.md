@@ -35,12 +35,12 @@ Cognito（統一認証）─┼─ iOS    : React Native (Expo)
 | Phase 9 | Cognito（ユーザー認証 / アプリ側 JWT 検証）（コード確定済み・未 apply） | Web / iOS / Android で共通のユーザー登録・ログインが動く。Rails API が JWT を検証できる |
 | Phase 10 | CloudFront + カスタムドメイン（コード確定済み・未 apply） | `https://example.com` で HTTPS アクセスできる |
 | Phase 11 | ElastiCache Redis（セッション / Sidekiq）（コード確定済み・未 apply） | Rails のセッション管理・Sidekiq バックグラウンドジョブが動く |
+| Phase 12 | 監視・トレーシング（コード確定済み・未 apply） | CloudWatch アラート・ダッシュボード・X-Ray トレーシング・EventBridge 障害通知が動く |
 
 ### 予定
 
 | フェーズ | 内容 | 主要リソース | 何ができるか |
 |---|---|---|---|
-| Phase 12 | 監視・トレーシング | CloudWatch / X-Ray / EventBridge | アラート通知・ボトルネック特定・障害検知ができる |
 | Phase 13 | 非同期処理 | SQS / SNS / Step Functions | 重い処理を非同期化。メール送信・AI 予想ジョブをキューで管理できる |
 | Phase 14 | OpenSearch | OpenSearch Service | 機器名・ブランド・スペックの全文検索が動く |
 | Phase 15 | Bedrock | Amazon Bedrock | AI による機器の互換性・音質の予想 API が動く |
@@ -104,6 +104,7 @@ Route 53 → CloudFront → ALB → Cognito（認証）
 │   ├── acm.tf              # ACM 証明書（us-east-1）+ DNS 検証レコード
 │   ├── route53.tf          # Hosted Zone + A/AAAA エイリアスレコード
 │   ├── elasticache.tf      # ElastiCache Redis + Subnet Group + SG + SSM
+│   ├── monitoring.tf       # SNS + CloudWatch Alarms/Dashboard + X-Ray IAM + EventBridge
 │   ├── lambda.tf           # IAM Role + Lambda 関数
 │   ├── apigateway.tf       # API Gateway v2 (HTTP API)
 │   └── outputs.tf          # URL・バケット名・API エンドポイントの出力
@@ -215,6 +216,21 @@ apply 手順:
 
 SG チェーン完成: `ALB(80) → ECS(3000) → RDS(5432) → ElastiCache(6379, ECS のみ)`。
 Rails の `config/cable.yml`・`config/initializers/session_store.rb`・Sidekiq の接続先に `REDIS_URL` 環境変数を使う。
+
+### 監視・トレーシング（Phase 12）※コード確定済み・未 apply
+
+| リソース | 説明 |
+|---|---|
+| `aws_sns_topic` | アラート通知先（メール購読） |
+| `aws_cloudwatch_metric_alarm` × 6 | ECS CPU/Memory・ALB 5xx・RDS CPU/Storage・Lambda Errors |
+| `aws_cloudwatch_dashboard` | ECS / ALB / RDS / Lambda を 1 画面で可視化 |
+| `aws_iam_role_policy_attachment`（xray） | ECS タスクロールに `AWSXRayDaemonWriteAccess` を付与 |
+| `aws_cloudwatch_event_rule` | ECS タスク STOPPED イベントを検知 |
+| `aws_cloudwatch_event_target` | EventBridge → SNS で障害通知 |
+
+X-Ray デーモンは ECS タスク内のサイドカーコンテナとして稼働。Rails アプリから `localhost:2000/UDP` にトレースを送ると X-Ray コンソールでサービスマップを確認できる。
+
+apply 後に `alert_email` 宛に SNS 購読確認メールが届くので **Confirm subscription** をクリックすること。
 
 ### Lambda + API Gateway（Phase 3）
 

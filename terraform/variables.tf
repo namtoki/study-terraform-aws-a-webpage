@@ -20,3 +20,9 @@ variable "domain_name" {
   description = "カスタムドメイン名（例: example.com）。Route 53 で管理するドメインが必要。"
   type        = string
 }
+
+variable "alert_email" {
+  description = "CloudWatch アラート通知先のメールアドレス"
+  type        = string
+  default     = "toshi.turner@gmail.com"
+}

@@ -78,3 +78,13 @@ output "redis_primary_endpoint" {
   description = "Redis のプライマリエンドポイント"
   value       = aws_elasticache_replication_group.main.primary_endpoint_address
 }
+
+output "cloudwatch_dashboard_url" {
+  description = "CloudWatch ダッシュボード URL"
+  value       = "https://${var.aws_region}.console.aws.amazon.com/cloudwatch/home?region=${var.aws_region}#dashboards:name=${var.project_name}"
+}
+
+output "sns_alerts_arn" {
+  description = "アラート通知 SNS トピック ARN"
+  value       = aws_sns_topic.alerts.arn
+}
