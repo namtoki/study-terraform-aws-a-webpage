@@ -421,15 +421,141 @@ terraform refresh
 terraform plan
 ```
 
+### 環境別の操作（Phase 18〜）
+
+```bash
+# dev 環境の初回セットアップ
+cd terraform/envs/dev
+terraform init
+terraform apply -var-file="terraform.tfvars"
+
+# prod 環境の初回セットアップ
+cd terraform/envs/prod
+terraform init
+terraform apply -var-file="terraform.tfvars"
+
+# 環境を指定して plan（ルートから）
+terraform -chdir=terraform/envs/dev plan -var-file="terraform.tfvars"
+terraform -chdir=terraform/envs/prod plan -var-file="terraform.tfvars"
+```
+
+### ECR push（Rails コンテナ）
+
+```bash
+# ECR にログイン
+AWS_ACCOUNT=$(aws sts get-caller-identity --query Account --output text)
+AWS_REGION=ap-northeast-1
+ECR_URL=$(terraform -chdir=terraform output -raw ecr_repository_url)
+
+aws ecr get-login-password --region $AWS_REGION \
+  | docker login --username AWS --password-stdin $ECR_URL
+
+# イメージをビルドして push
+docker build -t $ECR_URL:latest ./app
+docker push $ECR_URL:latest
+
+# push 後に ECS を最新イメージで再起動
+PROJECT=$(terraform -chdir=terraform output -raw project_name 2>/dev/null || echo "terraaws")
+aws ecs update-service \
+  --cluster ${PROJECT}-cluster \
+  --service ${PROJECT}-app \
+  --force-new-deployment
+```
+
+### ECS 確認・デバッグ
+
+```bash
+PROJECT=terraaws  # var.project_name の値
+
+# タスク一覧
+aws ecs list-tasks --cluster ${PROJECT}-cluster
+
+# タスクの詳細（停止理由の確認など）
+TASK_ARN=$(aws ecs list-tasks --cluster ${PROJECT}-cluster --query 'taskArns[0]' --output text)
+aws ecs describe-tasks --cluster ${PROJECT}-cluster --tasks $TASK_ARN
+
+# アプリログをリアルタイム確認
+aws logs tail /ecs/${PROJECT}-app --follow --since 10m
+
+# ECS Exec でコンテナに入る（デバッグ用）
+aws ecs execute-command \
+  --cluster ${PROJECT}-cluster \
+  --task $TASK_ARN \
+  --container app \
+  --interactive \
+  --command "/bin/bash"
+```
+
+### CI/CD セットアップ（Phase 17: GitHub Actions OIDC）
+
+```bash
+# apply 後に ARN を確認して GitHub Secrets に設定
+terraform -chdir=terraform output github_actions_role_arn
+
+# GitHub リポジトリに以下の Secrets を設定（GitHub UI または gh コマンド）
+# AWS_ROLE_ARN  = 上記で取得した ARN
+# AWS_REGION    = ap-northeast-1
+
+# 動作確認（ワークフロー手動実行）
+gh workflow run deploy.yml
+```
+
+### 監視・アラート確認（Phase 12〜16）
+
+```bash
+PROJECT=terraaws
+
+# CloudWatch アラーム一覧と状態確認
+aws cloudwatch describe-alarms \
+  --alarm-name-prefix $PROJECT \
+  --query 'MetricAlarms[*].[AlarmName,StateValue]' \
+  --output table
+
+# SNS 購読状態の確認（apply 後にメール確認が必要）
+SNS_ARN=$(terraform -chdir=terraform output -raw sns_alerts_arn)
+aws sns list-subscriptions-by-topic --topic-arn $SNS_ARN
+
+# CloudTrail: 直近のイベント確認
+aws cloudtrail lookup-events \
+  --max-results 20 \
+  --query 'Events[*].[EventTime,Username,EventName]' \
+  --output table
+
+# Auto Scaling の現在のタスク数確認
+aws application-autoscaling describe-scalable-targets \
+  --service-namespace ecs \
+  --query 'ScalableTargets[*].[ResourceId,MinCapacity,MaxCapacity]' \
+  --output table
+```
+
+### SQS 確認（Phase 13）
+
+```bash
+PROJECT=terraaws
+
+# キューの状態確認（メッセージ数など）
+QUEUE_URL=$(terraform -chdir=terraform output -raw sqs_job_queue_url)
+aws sqs get-queue-attributes \
+  --queue-url $QUEUE_URL \
+  --attribute-names ApproximateNumberOfMessages,ApproximateNumberOfMessagesNotVisible
+
+# DLQ のメッセージ確認（ジョブ失敗時）
+DLQ_URL=$(terraform -chdir=terraform output -raw sqs_dlq_url)
+aws sqs receive-message --queue-url $DLQ_URL
+```
+
 ### よくあるシナリオまとめ
 
 | シナリオ | コマンド |
 |---|---|
 | 初回構築 | bootstrap `apply` → `terraform init` → `terraform apply` → `./deploy.sh` |
+| Rails イメージを更新 | `docker build` → `docker push` → `ecs update-service --force-new-deployment` |
 | ページ内容を更新 | `./deploy.sh` |
 | Lambda コードを更新 | `lambda/handler.py` を編集 → `terraform apply` → `./deploy.sh` |
 | Terraform の設定を変えた | `terraform plan` → `terraform apply` |
-| URL を確認したい | `terraform output cloudfront_url` |
-| API エンドポイントを確認したい | `terraform output api_endpoint` |
+| ECS コンテナが起動しない | `aws ecs describe-tasks` で停止理由確認 → `aws logs tail` でログ確認 |
+| アラートが来た | `aws cloudwatch describe-alarms` → `aws logs tail` で原因調査 |
+| ジョブが失敗している | DLQ のメッセージを確認 → ログ調査 → 修正後に SQS に再投入 |
+| URL を確認したい | `terraform output custom_domain_url` |
 | 課金を止めたい | `terraform destroy` |
 | キャッシュが古い | `./deploy.sh`（内部で invalidation 実行） |
