@@ -110,9 +110,27 @@ Route 53 → CloudFront → ALB → Cognito（認証）
 │   ├── lambda.tf           # IAM Role + Lambda 関数
 │   ├── apigateway.tf       # API Gateway v2 (HTTP API)
 │   ├── outputs.tf          # URL・バケット名・API エンドポイントの出力
+│   │
+│   │   # ↑ terraform/ ルートは後方互換のため残存（非推奨）
+│   │   # 新規環境は envs/ 配下を使うこと
+│   │
+│   ├── modules/
+│   │   └── app/            # 全リソース定義のモジュール（envs/ から呼び出す）
+│   │       ├── providers.tf
+│   │       ├── variables.tf
+│   │       ├── outputs.tf
+│   │       └── *.tf
 │   └── envs/
-│       ├── dev/            # dev 環境エントリーポイント（スケルトン）
-│       └── prod/           # prod 環境エントリーポイント（スケルトン）
+│       ├── dev/            # dev 環境エントリーポイント
+│       │   ├── main.tf               # backend(dev) + provider + module "app"
+│       │   ├── variables.tf
+│       │   ├── outputs.tf
+│       │   └── terraform.tfvars.example
+│       └── prod/           # prod 環境エントリーポイント
+│           ├── main.tf               # backend(prod) + provider + module "app"
+│           ├── variables.tf
+│           ├── outputs.tf
+│           └── terraform.tfvars.example
 ├── app/
 │   └── Dockerfile          # Rails アプリのコンテナ定義
 ├── frontend/
@@ -326,17 +344,21 @@ terraform apply
 terraform output tfstate_bucket
 ```
 
-### 初回セットアップ（1回だけ）
+### 初回セットアップ（envs/ 使用・推奨）
 
 ```bash
-cd terraform
+# dev 環境
+cp terraform/envs/dev/terraform.tfvars.example terraform/envs/dev/terraform.tfvars
+# terraform.tfvars に実際の値を記入してから…
+cd terraform/envs/dev
 terraform init
+terraform apply -var-file="terraform.tfvars"
 ```
 
 ### インフラの操作（Terraform）
 
 ```bash
-cd terraform
+cd terraform/envs/dev   # または prod
 
 # 変更内容を事前確認（何も作らない）
 terraform plan
