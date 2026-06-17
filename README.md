@@ -89,45 +89,37 @@ Route 53 → CloudFront → ALB → Cognito（認証）
 │   │   ├── providers.tf
 │   │   ├── main.tf
 │   │   └── outputs.tf
-│   ├── providers.tf        # AWS / archive プロバイダー / S3 バックエンド設定
-│   ├── variables.tf        # 変数定義
-│   ├── main.tf             # S3 + CloudFront + OAC + バケットポリシー
-│   ├── vpc.tf              # VPC + Subnet + IGW + NAT Gateway（公式モジュール）
-│   ├── ecr.tf              # ECR リポジトリ + ライフサイクルポリシー
-│   ├── rds.tf              # RDS PostgreSQL + Secrets Manager + SSM Parameter
-│   ├── alb.tf              # ALB + Target Group + Listener + SG
-│   ├── ecs.tf              # ECS Cluster + Task Definition + Service + IAM Role
-│   ├── cognito.tf          # Cognito User Pool + App Client（Web/Mobile）
-│   ├── acm.tf              # ACM 証明書（us-east-1）+ DNS 検証レコード
-│   ├── route53.tf          # Hosted Zone + A/AAAA エイリアスレコード
-│   ├── elasticache.tf      # ElastiCache Redis + Subnet Group + SG + SSM
-│   ├── monitoring.tf       # SNS + CloudWatch Alarms/Dashboard + X-Ray IAM + EventBridge
-│   ├── sqs.tf              # SQS ジョブキュー + DLQ + IAM + SSM
-│   ├── opensearch.tf       # OpenSearch ドメイン + SG + IAM + SSM
-│   ├── bedrock.tf          # Bedrock IAM 権限 + SSM
-│   ├── reliability.tf      # ECS Auto Scaling + AWS Backup + CloudTrail
-│   ├── cicd.tf             # GitHub Actions OIDC + IAM Role
-│   ├── lambda.tf           # IAM Role + Lambda 関数
-│   ├── apigateway.tf       # API Gateway v2 (HTTP API)
-│   ├── outputs.tf          # URL・バケット名・API エンドポイントの出力
-│   │
-│   │   # ↑ terraform/ ルートは後方互換のため残存（非推奨）
-│   │   # 新規環境は envs/ 配下を使うこと
-│   │
 │   ├── modules/
 │   │   └── app/            # 全リソース定義のモジュール（envs/ から呼び出す）
-│   │       ├── providers.tf
+│   │       ├── providers.tf  # configuration_aliases = [aws.us_east_1]
 │   │       ├── variables.tf
 │   │       ├── outputs.tf
-│   │       └── *.tf
+│   │       ├── main.tf       # S3 + CloudFront
+│   │       ├── vpc.tf
+│   │       ├── ecr.tf
+│   │       ├── rds.tf
+│   │       ├── alb.tf
+│   │       ├── ecs.tf
+│   │       ├── cognito.tf
+│   │       ├── acm.tf
+│   │       ├── route53.tf
+│   │       ├── elasticache.tf
+│   │       ├── monitoring.tf
+│   │       ├── sqs.tf
+│   │       ├── opensearch.tf
+│   │       ├── bedrock.tf
+│   │       ├── reliability.tf
+│   │       ├── cicd.tf
+│   │       ├── lambda.tf
+│   │       └── apigateway.tf
 │   └── envs/
 │       ├── dev/            # dev 環境エントリーポイント
-│       │   ├── main.tf               # backend(dev) + provider + module "app"
+│       │   ├── main.tf               # backend(dev/terraform.tfstate) + provider + module "app"
 │       │   ├── variables.tf
 │       │   ├── outputs.tf
 │       │   └── terraform.tfvars.example
 │       └── prod/           # prod 環境エントリーポイント
-│           ├── main.tf               # backend(prod) + provider + module "app"
+│           ├── main.tf               # backend(prod/terraform.tfstate) + provider + module "app"
 │           ├── variables.tf
 │           ├── outputs.tf
 │           └── terraform.tfvars.example
