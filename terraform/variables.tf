@@ -26,3 +26,15 @@ variable "alert_email" {
   type        = string
   default     = "toshi.turner@gmail.com"
 }
+
+variable "github_org" {
+  description = "GitHub の組織名またはユーザー名（OIDC 信頼ポリシーで使用）"
+  type        = string
+  default     = "namtoki"
+}
+
+variable "github_repo" {
+  description = "GitHub リポジトリ名（OIDC 信頼ポリシーで使用）"
+  type        = string
+  default     = "study-terraform-aws-a-webpage"
+}

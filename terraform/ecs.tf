@@ -72,6 +72,9 @@ data "aws_iam_policy_document" "ecs_secrets" {
       aws_ssm_parameter.db_name.arn,
       aws_ssm_parameter.rails_env.arn,
       aws_ssm_parameter.redis_url.arn,
+      aws_ssm_parameter.sqs_job_queue_url.arn,
+      aws_ssm_parameter.opensearch_url.arn,
+      aws_ssm_parameter.bedrock_region.arn,
     ]
   }
 }
@@ -136,6 +139,9 @@ resource "aws_ecs_task_definition" "app" {
         { name = "DB_USERNAME", valueFrom = "${aws_db_instance.main.master_user_secret[0].secret_arn}:username::" },
         { name = "DB_PASSWORD", valueFrom = "${aws_db_instance.main.master_user_secret[0].secret_arn}:password::" },
         { name = "REDIS_URL", valueFrom = aws_ssm_parameter.redis_url.arn },
+        { name = "SQS_JOB_QUEUE_URL", valueFrom = aws_ssm_parameter.sqs_job_queue_url.arn },
+        { name = "OPENSEARCH_URL", valueFrom = aws_ssm_parameter.opensearch_url.arn },
+        { name = "BEDROCK_REGION", valueFrom = aws_ssm_parameter.bedrock_region.arn },
       ]
 
       logConfiguration = {

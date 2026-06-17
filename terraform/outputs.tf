@@ -88,3 +88,38 @@ output "sns_alerts_arn" {
   description = "アラート通知 SNS トピック ARN"
   value       = aws_sns_topic.alerts.arn
 }
+
+output "sqs_job_queue_url" {
+  description = "SQS ジョブキュー URL（Rails / Sidekiq の接続先）"
+  value       = aws_sqs_queue.jobs.url
+}
+
+output "sqs_dlq_url" {
+  description = "SQS Dead Letter Queue URL（処理失敗メッセージの退避先）"
+  value       = aws_sqs_queue.jobs_dlq.url
+}
+
+output "opensearch_endpoint" {
+  description = "OpenSearch ドメインエンドポイント"
+  value       = "https://${aws_opensearch_domain.main.endpoint}"
+}
+
+output "bedrock_enabled_region" {
+  description = "Bedrock を利用するリージョン"
+  value       = var.aws_region
+}
+
+output "cloudtrail_s3_bucket" {
+  description = "CloudTrail ログの保存先 S3 バケット"
+  value       = aws_s3_bucket.cloudtrail.id
+}
+
+output "backup_vault_arn" {
+  description = "AWS Backup ボールト ARN"
+  value       = aws_backup_vault.main.arn
+}
+
+output "github_actions_role_arn" {
+  description = "GitHub Actions が AssumeRole する IAM ロール ARN（workflow の aws-actions/configure-aws-credentials に設定）"
+  value       = aws_iam_role.github_actions.arn
+}
