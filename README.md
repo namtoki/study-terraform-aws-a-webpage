@@ -423,6 +423,15 @@ terraform plan
 
 ### 環境別の操作（Phase 18〜）
 
+Bootstrap（S3 バケット・DynamoDB テーブル）は dev/prod 共通の 1 つを使いまわす。
+tfstate は S3 キーで分離されており、上書きは起きない。
+
+```
+S3 バケット（共通）
+  ├── dev/terraform.tfstate   ← envs/dev/ が使う
+  └── prod/terraform.tfstate  ← envs/prod/ が使う
+```
+
 ```bash
 # dev 環境の初回セットアップ
 cd terraform/envs/dev
