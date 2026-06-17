@@ -36,17 +36,14 @@ Cognito（統一認証）─┼─ iOS    : React Native (Expo)
 | Phase 10 | CloudFront + カスタムドメイン（コード確定済み・未 apply） | `https://example.com` で HTTPS アクセスできる |
 | Phase 11 | ElastiCache Redis（セッション / Sidekiq）（コード確定済み・未 apply） | Rails のセッション管理・Sidekiq バックグラウンドジョブが動く |
 | Phase 12 | 監視・トレーシング（コード確定済み・未 apply） | CloudWatch アラート・ダッシュボード・X-Ray トレーシング・EventBridge 障害通知が動く |
+| Phase 13 | 非同期処理（コード確定済み・未 apply） | SQS ジョブキューで重い処理を非同期化。メール送信・AI 予想ジョブをキューで管理できる |
+| Phase 14 | OpenSearch（コード確定済み・未 apply） | 機器名・ブランド・スペックの全文検索が動く |
+| Phase 15 | Bedrock（コード確定済み・未 apply） | AI による機器の互換性・音質の予想 API が動く |
+| Phase 16 | 運用自動化・信頼性（コード確定済み・未 apply） | 障害時の自動復旧・トラフィック増加時の自動スケール・監査ログが揃う |
+| Phase 17 | CI/CD（コード確定済み・未 apply） | git push だけで自動テスト・自動デプロイが動く |
+| Phase 18 | 環境分離（コード確定済み・未 apply） | dev と prod を独立した Terraform 構成で管理できる |
 
 ### 予定
-
-| フェーズ | 内容 | 主要リソース | 何ができるか |
-|---|---|---|---|
-| Phase 13 | 非同期処理 | SQS / SNS / Step Functions | 重い処理を非同期化。メール送信・AI 予想ジョブをキューで管理できる |
-| Phase 14 | OpenSearch | OpenSearch Service | 機器名・ブランド・スペックの全文検索が動く |
-| Phase 15 | Bedrock | Amazon Bedrock | AI による機器の互換性・音質の予想 API が動く |
-| Phase 16 | 運用自動化・信頼性 | Systems Manager / AWS Config / CloudTrail / AWS Backup / RDS Multi-AZ・リードレプリカ / Auto Scaling | 障害時の自動復旧・トラフィック増加時の自動スケール・監査ログが揃う |
-| Phase 17 | CI/CD | CodePipeline / CodeBuild / CodeDeploy / GitHub Actions / OIDC | git push だけで自動テスト・自動デプロイが動く |
-| Phase 18 | 環境分離 | dev / prod モジュール構成 | dev と prod を独立した Terraform 構成で管理できる |
 
 Phase 18 完了以降はアプリ開発（高級オーディオ情報サイト）に注力。
 
@@ -105,9 +102,17 @@ Route 53 → CloudFront → ALB → Cognito（認証）
 │   ├── route53.tf          # Hosted Zone + A/AAAA エイリアスレコード
 │   ├── elasticache.tf      # ElastiCache Redis + Subnet Group + SG + SSM
 │   ├── monitoring.tf       # SNS + CloudWatch Alarms/Dashboard + X-Ray IAM + EventBridge
+│   ├── sqs.tf              # SQS ジョブキュー + DLQ + IAM + SSM
+│   ├── opensearch.tf       # OpenSearch ドメイン + SG + IAM + SSM
+│   ├── bedrock.tf          # Bedrock IAM 権限 + SSM
+│   ├── reliability.tf      # ECS Auto Scaling + AWS Backup + CloudTrail
+│   ├── cicd.tf             # GitHub Actions OIDC + IAM Role
 │   ├── lambda.tf           # IAM Role + Lambda 関数
 │   ├── apigateway.tf       # API Gateway v2 (HTTP API)
-│   └── outputs.tf          # URL・バケット名・API エンドポイントの出力
+│   ├── outputs.tf          # URL・バケット名・API エンドポイントの出力
+│   └── envs/
+│       ├── dev/            # dev 環境エントリーポイント（スケルトン）
+│       └── prod/           # prod 環境エントリーポイント（スケルトン）
 ├── app/
 │   └── Dockerfile          # Rails アプリのコンテナ定義
 ├── frontend/
@@ -231,6 +236,66 @@ Rails の `config/cable.yml`・`config/initializers/session_store.rb`・Sidekiq 
 X-Ray デーモンは ECS タスク内のサイドカーコンテナとして稼働。Rails アプリから `localhost:2000/UDP` にトレースを送ると X-Ray コンソールでサービスマップを確認できる。
 
 apply 後に `alert_email` 宛に SNS 購読確認メールが届くので **Confirm subscription** をクリックすること。
+
+### 非同期処理 SQS（Phase 13）※コード確定済み・未 apply
+
+| リソース | 説明 |
+|---|---|
+| `aws_sqs_queue.jobs` | Rails / Sidekiq 用ジョブキュー（Standard / Long Polling / 暗号化） |
+| `aws_sqs_queue.jobs_dlq` | Dead Letter Queue（3回失敗で退避） |
+| `aws_sqs_queue_policy` | ECS タスクロールからの操作のみ許可 |
+| `aws_iam_role_policy.ecs_task_sqs` | ECS タスクロールに SQS 操作権限を付与 |
+| `aws_ssm_parameter.sqs_job_queue_url` | `SQS_JOB_QUEUE_URL` を ECS タスクに注入 |
+
+### OpenSearch（Phase 14）※コード確定済み・未 apply
+
+| リソース | 説明 |
+|---|---|
+| `aws_opensearch_domain` | OpenSearch 2.11 / t3.small / シングルノード / Private Subnet |
+| `aws_security_group.opensearch` | ECS の SG からの HTTPS(443) のみ許可 |
+| `aws_secretsmanager_secret.opensearch_master` | マスター認証情報を Secrets Manager で管理 |
+| `aws_iam_role_policy.ecs_task_opensearch` | ECS タスクロールに OpenSearch 操作権限を付与 |
+| `aws_ssm_parameter.opensearch_url` | `OPENSEARCH_URL` を ECS タスクに注入 |
+
+### Bedrock（Phase 15）※コード確定済み・未 apply
+
+| リソース | 説明 |
+|---|---|
+| `aws_iam_role_policy.ecs_task_bedrock` | ECS タスクロールに Bedrock InvokeModel 権限を付与 |
+| `aws_ssm_parameter.bedrock_region` | `BEDROCK_REGION` を ECS タスクに注入 |
+
+Bedrock はマネージドサービスのため IAM 権限と SSM のみ。コンソールで使用するモデルを事前に有効化すること。
+
+### 運用自動化・信頼性（Phase 16）※コード確定済み・未 apply
+
+| リソース | 説明 |
+|---|---|
+| `aws_appautoscaling_target` | ECS サービスをスケーリング対象に登録 |
+| `aws_appautoscaling_policy` × 2 | CPU / メモリ 70% 超過でスケールアウト（最大 4 タスク） |
+| `aws_backup_vault` | バックアップデータの保存先 |
+| `aws_backup_plan` | RDS の日次バックアップ（02:00 UTC / 7 日保持） |
+| `aws_backup_selection` | RDS インスタンスをバックアップ対象に登録 |
+| `aws_cloudtrail` | 全リージョン・全 API コールを S3 に記録 |
+| `aws_s3_bucket.cloudtrail` | CloudTrail ログ保存先（90 日でライフサイクル削除） |
+
+### CI/CD: GitHub Actions OIDC（Phase 17）※コード確定済み・未 apply
+
+| リソース | 説明 |
+|---|---|
+| `aws_iam_openid_connect_provider.github` | GitHub Actions の OIDC プロバイダー登録 |
+| `aws_iam_role.github_actions` | GitHub Actions が AssumeRoleWithWebIdentity するロール |
+| `aws_iam_role_policy.github_actions` | ECR push + ECS UpdateService 権限 |
+
+apply 後に `terraform output github_actions_role_arn` で取得した ARN を GitHub リポジトリの Secrets に設定すること。
+
+### 環境分離（Phase 18）※コード確定済み・未 apply
+
+| ディレクトリ | 説明 |
+|---|---|
+| `terraform/envs/dev/` | dev 環境のエントリーポイント（スケルトン） |
+| `terraform/envs/prod/` | prod 環境のエントリーポイント（スケルトン） |
+
+現状は `terraform/` ルートを直接使用。将来的に `envs/` から `module "app"` を呼び出す構成に移行する。
 
 ### Lambda + API Gateway（Phase 3）
 
